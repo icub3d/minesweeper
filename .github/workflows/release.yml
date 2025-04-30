@@ -43,7 +43,7 @@ jobs:
           sudo apt-get install g++ pkg-config libx11-dev libasound2-dev libudev-dev libxkbcommon-x11-0
 
     - name: Build project
-      run: 
+      run: |
         cargo build --release --bin minesweeper
         mv target/release/${{ matrix.old-name }} target/release/${{ matrix.new-name }}
 
