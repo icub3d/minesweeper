@@ -4,22 +4,38 @@ on:
   release:
     types: [created]
 
+env:
+  CARGO_TERM_COLOR: always
+
 jobs:
   build:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
+        include:
+          - os: ubuntu-latest
+            old-name: minesweeper
+            new-name: minesweeper-${{ github.event.release.tag_name }}-linux
+          - os: windows-latest
+            old-name: minesweeper.exe
+            new-name: minesweeper-${{ github.event.release.tag_name }}-windows.exe
+          - os: macos-latest
+            old-name: minesweeper
+            new-name: minesweeper-${{ github.event.release.tag_name }}-macos
 
     steps:
     - name: Checkout code
       uses: actions/checkout@v3
 
-    - name: Set up Rust
-      uses: actions-rs/toolchain@v1
+    - name: Cache
+      uses: actions/cache@v4
       with:
-        toolchain: stable
-        target: ${{ matrix.os == 'windows-latest' && 'x86_64-pc-windows-msvc' || matrix.os == 'macos-latest' && 'x86_64-apple-darwin' || 'x86_64-unknown-linux-gnu' }}
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+          target
+        key: ${{ matrix.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
     - name: Install dependencies
       if: matrix.os == 'ubuntu-latest'
@@ -27,33 +43,10 @@ jobs:
           sudo apt-get install g++ pkg-config libx11-dev libasound2-dev libudev-dev libxkbcommon-x11-0
 
     - name: Build project
-      run: cargo build --release --bin minesweeper
+      run: 
+        cargo build --release --bin minesweeper
+        mv target/release/${{ matrix.old-name }} target/release/${{ matrix.new-name }}
 
-    - name: Upload artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: ${{ matrix.os }}-binary
-        path: target/release
-
-  publish:
-    needs: build
-    runs-on: ubuntu-latest
-
-    steps:
-    - name: Download artifacts
-      uses: actions/download-artifact@v4
-      with:
-        name: ${{ matrix.os }}-binary
-
-    - name: Create release assets
+    - name: Upload to release
       run: |
-        mkdir release-assets
-        cp target/release/* release-assets/
-
-    - name: Upload release assets
-      uses: actions/upload-release-asset@v1
-      with:
-        upload_url: ${{ github.event.release.upload_url }}
-        asset_path: release-assets
-        asset_name: ${{ matrix.os }}-binary.zip
-        asset_content_type: application/zip
+        gh release upload --clobber ${{ github.event.release.tag_name }} target/release/${{ matrix.new-name }} 
