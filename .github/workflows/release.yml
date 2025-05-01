@@ -48,7 +48,7 @@ jobs:
 
     - name: Build project
       run: |
-        cargo build --release --bin minesweeper
+        cargo build --release
         mv target/release/${{ matrix.old-name }} target/release/${{ matrix.new-name }}
 
     - name: Upload to release
