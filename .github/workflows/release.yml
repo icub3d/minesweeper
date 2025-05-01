@@ -55,8 +55,12 @@ jobs:
     - name: Cleanup
       if: matrix.os == 'windows-latest'
       run: |
-        rm -Force target/release/${{ matrix.old-name }}
-        rm -Force target/release/${{ matrix.new-name }}
+        if (Test-Path target/release/${{ matrix.old-name }}) {
+          Remove-Item -Force target/release/${{ matrix.old-name }}
+        }
+        if (Test-Path target/release/${{ matrix.new-name }}) {
+          Remove-Item -Force target/release/${{ matrix.new-name }}
+        }
 
 
     - name: Build project
