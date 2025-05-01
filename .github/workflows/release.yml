@@ -44,7 +44,20 @@ jobs:
     - name: Install dependencies
       if: matrix.os == 'ubuntu-latest'
       run: |
-          sudo apt-get install g++ pkg-config libx11-dev libasound2-dev libudev-dev libxkbcommon-x11-0
+        sudo apt-get install g++ pkg-config libx11-dev libasound2-dev libudev-dev libxkbcommon-x11-0
+
+    - name: Cleanup
+      if: matrix.os == 'ubuntu-latest' || matrix.os == 'macos-latest'
+      run: |
+        rm -f target/release/${{ matrix.old-name }}
+        rm -f target/release/${{ matrix.new-name }}
+
+    - name: Cleanup
+      if: matrix.os == 'windows-latest'
+      run: |
+        rm -Force target/release/${{ matrix.old-name }}
+        rm -Force target/release/${{ matrix.new-name }}
+
 
     - name: Build project
       run: |
