@@ -4,6 +4,9 @@ on:
   release:
     types: [created]
 
+permissions:
+  contents: write
+
 env:
   CARGO_TERM_COLOR: always
   GH_TOKEN: ${{ github.token }}
@@ -50,4 +53,4 @@ jobs:
 
     - name: Upload to release
       run: |
-        gh release upload --clobber ${{ github.event.release.tag_name }} target/release/${{ matrix.new-name }} 
+        gh release upload --clobber ${{ github.event.release.tag_name }} target/release/${{ matrix.new-name }}
