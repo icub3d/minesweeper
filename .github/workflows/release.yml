@@ -49,6 +49,8 @@ jobs:
     - name: Build project
       run: |
         cargo build --release
+        rm target/release/${{ matrix.old-name }}
+        rm target/release/${{ matrix.new-name }}
         mv target/release/${{ matrix.old-name }} target/release/${{ matrix.new-name }}
 
     - name: Upload to release
