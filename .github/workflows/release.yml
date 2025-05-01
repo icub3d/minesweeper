@@ -48,8 +48,8 @@ jobs:
 
     - name: Build project
       run: |
-        rm target/release/${{ matrix.old-name }}
-        rm target/release/${{ matrix.new-name }}
+        rm -f target/release/${{ matrix.old-name }}
+        rm -f target/release/${{ matrix.new-name }}
         cargo build --release
         mv target/release/${{ matrix.old-name }} target/release/${{ matrix.new-name }}
 
