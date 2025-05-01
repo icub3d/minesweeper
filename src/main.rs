@@ -1,11 +1,19 @@
+mod assets;
+mod game;
+mod helpers;
+mod popup;
+
+use crate::assets::EmbeddedAssetsPlugin;
+use crate::game::{Action, Game, Response};
+use crate::helpers::{GameState, despawn_screen};
+use crate::popup::{button_system, popup_window};
 use bevy::log::LogPlugin;
 use bevy::{prelude::*, window::PrimaryWindow};
 use bevy_egui::EguiPlugin;
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use clap::Parser;
-use minesweeper::game::{Action, Game, Response};
-use minesweeper::popup::{button_system, popup_window};
-use minesweeper::{GameState, despawn_screen};
+
+const ASSET_PREFIX: &str = "embedded://minesweeper/assets/";
 
 #[derive(Parser, Debug)]
 #[clap(author = "The Marshians", version = "0.1.0", about = "Play Minesweeper!", long_about = None)]
@@ -44,7 +52,12 @@ fn main() {
         .add_systems(Startup, |mut commands: Commands| {
             commands.spawn((Name::new("Camera2d"), Camera2d));
         })
-        .add_plugins((MinesweeperPlugin, GameWonScreen, GameLostScreen));
+        .add_plugins((
+            EmbeddedAssetsPlugin,
+            MinesweeperPlugin,
+            GameWonScreen,
+            GameLostScreen,
+        ));
 
     if args.inspector {
         app.add_plugins(EguiPlugin {
@@ -116,7 +129,7 @@ fn create_game(mut commands: Commands, asset_server: Res<AssetServer>) {
             let tile_position = game.tile_position(column, row);
             commands.spawn((
                 Name::new(format!("Cell ({}, {})", row, column)),
-                Sprite::from_image(asset_server.load("closed.png")),
+                Sprite::from_image(asset_server.load(format!("{}/closed.png", ASSET_PREFIX))),
                 Transform {
                     translation: Vec3::new(tile_position.x, tile_position.y, 1.0),
                     ..default()
@@ -188,10 +201,11 @@ fn update_game(
                 };
                 let tile = game.tile(tile_position.0, tile_position.1);
                 if tile.bomb {
-                    sprite.image = asset_server.load("bomb.png");
+                    sprite.image = asset_server.load(format!("{}/bomb.png", ASSET_PREFIX));
                 } else {
                     sprite.image = asset_server.load(format!(
-                        "{}.png",
+                        "{}/{}.png",
+                        ASSET_PREFIX,
                         game.tile_number(tile_position.0, tile_position.1)
                     ));
                 }
@@ -207,10 +221,11 @@ fn update_game(
                 };
                 let tile = game.tile(tile_position.0, tile_position.1);
                 if tile.bomb {
-                    sprite.image = asset_server.load("bomb.png");
+                    sprite.image = asset_server.load(format!("{}/bomb.png", ASSET_PREFIX));
                 } else {
                     sprite.image = asset_server.load(format!(
-                        "{}.png",
+                        "{},{}.png",
+                        ASSET_PREFIX,
                         game.tile_number(tile_position.0, tile_position.1)
                     ));
                 }
@@ -226,7 +241,8 @@ fn update_game(
                 if tiles.contains(&tile_position) {
                     trace!("Revealed tile: ({}, {})", tile_position.0, tile_position.1);
                     sprite.image = asset_server.load(format!(
-                        "{}.png",
+                        "{}/{}.png",
+                        ASSET_PREFIX,
                         game.tile_number(tile_position.0, tile_position.1)
                     ));
                 }
@@ -240,7 +256,7 @@ fn update_game(
                 };
                 if tile_x == tile_position.0 && tile_y == tile_position.1 {
                     // Change the color of the clicked tile to blue
-                    sprite.image = asset_server.load("flag.png");
+                    sprite.image = asset_server.load(format!("{}/flag.png", ASSET_PREFIX));
                     break;
                 }
             }
@@ -254,7 +270,7 @@ fn update_game(
                 };
                 if tile_x == tile_position.0 && tile_y == tile_position.1 {
                     // Change the color of the clicked tile to blue
-                    sprite.image = asset_server.load("closed.png");
+                    sprite.image = asset_server.load(format!("{}/closed.png", ASSET_PREFIX));
                     break;
                 }
             }

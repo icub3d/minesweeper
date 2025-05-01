@@ -119,8 +119,6 @@ pub enum GameError {
     CannotModifyVisibleTile,
     #[error("Cannot reveal a flagged tile")]
     CannotRevealFlaggedTile,
-    #[error("Game Over! You hit a bomb!")]
-    GameOver,
     #[error("Game is over")]
     GameAlreadyOver,
 }

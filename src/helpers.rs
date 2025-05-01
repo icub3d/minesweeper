@@ -1,5 +1,3 @@
-pub mod game;
-pub mod popup;
 
 use bevy::ecs::component::Component;
 use bevy::ecs::query::With;

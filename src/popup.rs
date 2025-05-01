@@ -1,17 +1,12 @@
 use bevy::prelude::*;
 use catppuccin::PALETTE;
 
-use crate::{GameState, color_convert};
+use crate::helpers::{GameState, color_convert};
 
 const NORMAL_BUTTON: Color = color_convert(PALETTE.mocha.colors.green, 1.0);
 const HOVERED_BUTTON: Color = color_convert(PALETTE.mocha.colors.red, 1.0);
 const PRESSED_BUTTON: Color = color_convert(PALETTE.mocha.colors.flamingo, 1.0);
 
-#[derive(Resource)]
-pub struct PopupScreenInfo {
-    pub message: String,
-    pub on_close: Box<dyn Fn() + Send + Sync>,
-}
 
 pub fn popup_window(msg: &str) -> impl Bundle + use<> {
     (
