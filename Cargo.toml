@@ -13,6 +13,11 @@ thiserror = "2.0.12"
 serde = { version = "1.0", features = ["derive"] }
 bevy_egui = "0.34.1"
 catppuccin = "2.5.1"
+getrandom = { version = "0.3.2", features = ["wasm_js"] }
+chrono = { version = "0.4.41", features = ["serde"] }
+# wasm-bindgen = "0.2.100"
+# console_error_panic_hook = "0.1.7"
+# web-sys = { version = "0.3.77", features = ["Window", "Document"] }
 
 # Enable a small amount of optimization in the dev profile.
 [profile.dev]
@@ -40,4 +45,3 @@ inherits = "release"
 opt-level = "s"
 # Strip all debugging information from the binary to slightly reduce file size.
 strip = "debuginfo"
-

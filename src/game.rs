@@ -1,7 +1,8 @@
-use std::{collections::HashSet, time::SystemTime};
+use std::collections::HashSet;
 
 use anyhow::Result;
 use bevy::{ecs::component::Component, math::Vec2};
+use chrono::prelude::*;
 use rand::Rng;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
@@ -98,15 +99,15 @@ pub enum Action {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct LogEntry {
-    pub when: SystemTime,
+    pub when: DateTime<Utc>,
     pub action: Action,
 }
 
 #[derive(Clone, Serialize, Deserialize, Component)]
 pub struct Game {
     pub board: Board,
-    pub started: SystemTime,
-    pub finished: Option<SystemTime>,
+    pub started: DateTime<Utc>,
+    pub finished: Option<DateTime<Utc>>,
     pub game_over: bool,
     pub game_won: bool,
     pub log: Vec<LogEntry>,
@@ -135,7 +136,7 @@ pub enum Response {
 impl Game {
     pub fn new(width: usize, height: usize, bombs: usize) -> Game {
         let board = Board::new(width, height, bombs);
-        let started = SystemTime::now();
+        let started = Utc::now();
         let finished = None;
         let game_over = false;
         let game_won = false;
@@ -213,7 +214,7 @@ impl Game {
         };
 
         self.log.push(LogEntry {
-            when: SystemTime::now(),
+            when: Utc::now(),
             action: action.clone(),
         });
 
@@ -267,7 +268,7 @@ impl Game {
     pub fn finish_game(&mut self, won: bool) {
         self.game_over = true;
         self.game_won = won;
-        self.finished = Some(SystemTime::now());
+        self.finished = Some(Utc::now());
     }
 
     pub fn window_to_world(

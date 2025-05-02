@@ -1,10 +1,14 @@
 {
     "cSpell.words": [
+        "bindgen",
+        "chrono",
         "codegen",
         "debuginfo",
         "despawn",
         "egui",
+        "getrandom",
         "Marshians",
+        "rustflags",
         "serde",
         "srgb",
         "srgba",
