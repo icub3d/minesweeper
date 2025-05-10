@@ -1,14 +1,9 @@
 use bevy::prelude::*;
-use catppuccin::PALETTE;
 
-use crate::helpers::{GameState, color_convert};
+use crate::colors::{BASE_80, CRUST, GREEN};
 
-const NORMAL_BUTTON: Color = color_convert(PALETTE.mocha.colors.green, 1.0);
-const HOVERED_BUTTON: Color = color_convert(PALETTE.mocha.colors.red, 1.0);
-const PRESSED_BUTTON: Color = color_convert(PALETTE.mocha.colors.flamingo, 1.0);
-
-
-pub fn popup_window(msg: &str) -> impl Bundle + use<> {
+/// Create a popup windows with a message and a button.
+pub fn popup_window(msg: &str, button_text: &str) -> impl Bundle + use<> {
     (
         (
             Name::new("Popup"),
@@ -25,37 +20,15 @@ pub fn popup_window(msg: &str) -> impl Bundle + use<> {
                 padding: UiRect::all(Val::Px(30.0)),
                 ..default()
             },
-            BorderColor(color_convert(PALETTE.mocha.colors.crust, 1.0)),
-            BackgroundColor(color_convert(PALETTE.mocha.colors.base, 0.8)),
+            BorderColor(CRUST),
+            BackgroundColor(BASE_80),
         ),
-        children![Text::new(msg), button()],
+        children![Text::new(msg), button(button_text)],
     )
 }
 
-pub fn button_system(
-    mut interaction_query: Query<
-        (&Interaction, &mut BackgroundColor),
-        (Changed<Interaction>, With<Button>),
-    >,
-    mut next_state: ResMut<NextState<GameState>>,
-) {
-    for (interaction, mut color) in &mut interaction_query {
-        match *interaction {
-            Interaction::Pressed => {
-                *color = PRESSED_BUTTON.into();
-                next_state.set(GameState::Playing);
-            }
-            Interaction::Hovered => {
-                *color = HOVERED_BUTTON.into();
-            }
-            Interaction::None => {
-                *color = NORMAL_BUTTON.into();
-            }
-        }
-    }
-}
-
-fn button() -> impl Bundle + use<> {
+// Add a button to the popup window.
+fn button(text: &str) -> impl Bundle + use<> {
     (
         Node {
             width: Val::Percent(100.0),
@@ -78,16 +51,16 @@ fn button() -> impl Bundle + use<> {
                 align_items: AlignItems::Center,
                 ..default()
             },
-            BorderColor(color_convert(PALETTE.mocha.colors.crust, 1.0)),
+            BorderColor(CRUST),
             BorderRadius::MAX,
-            BackgroundColor(NORMAL_BUTTON),
+            BackgroundColor(GREEN),
             children![(
-                Text::new("Play Again"),
+                Text::new(text),
                 TextFont {
                     font_size: 20.0,
                     ..default()
                 },
-                TextColor(color_convert(PALETTE.mocha.colors.crust, 1.0)),
+                TextColor(CRUST),
             )]
         )],
     )

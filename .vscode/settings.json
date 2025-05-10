@@ -5,6 +5,7 @@
         "codegen",
         "debuginfo",
         "despawn",
+        "despawns",
         "egui",
         "getrandom",
         "Marshians",

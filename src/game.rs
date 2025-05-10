@@ -1,8 +1,6 @@
 use std::collections::HashSet;
 
-use anyhow::Result;
-use bevy::{ecs::component::Component, math::Vec2};
-use chrono::prelude::*;
+use bevy::{ecs::resource::Resource, math::Vec2};
 use rand::Rng;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
@@ -19,16 +17,64 @@ pub struct Tile {
     pub number: u8,
 }
 
-#[derive(Clone, Serialize, Deserialize)]
-pub struct Board {
-    pub tiles: Vec<Vec<Tile>>,
+#[derive(Serialize, Deserialize, PartialEq, Clone)]
+pub enum Action {
+    Flag,
+    Reveal,
+}
+
+#[derive(Clone, Serialize, Deserialize, Resource)]
+pub struct Game {
+    pub board: Vec<Vec<Tile>>,
+    pub game_over: bool,
+    pub game_won: bool,
+    pub top_left: Vec2,
     pub width: usize,
     pub height: usize,
     pub bombs: usize,
 }
 
-impl Board {
-    pub fn new(width: usize, height: usize, bombs: usize) -> Board {
+#[derive(Error, Debug)]
+pub enum GameError {
+    #[error("Cannot modify a visible tile")]
+    CannotModifyVisibleTile,
+    #[error("Cannot reveal a flagged tile")]
+    CannotRevealFlaggedTile,
+    #[error("Game is over")]
+    GameAlreadyOver,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub enum Response {
+    GameOver,
+    GameWon,
+    Flag,
+    Unflag,
+    Reveal(HashSet<(usize, usize)>),
+}
+
+impl Game {
+    pub fn new(width: usize, height: usize, bombs: usize) -> Game {
+        let board = Self::initialize_board(width, height, bombs);
+        let game_over = false;
+        let game_won = false;
+        let top_left = Vec2::new(
+            -TILE_SIZE_WITH_GAP * width as f32 / 2.0,
+            TILE_SIZE_WITH_GAP * height as f32 / 2.0,
+        );
+
+        Game {
+            board,
+            game_over,
+            game_won,
+            top_left,
+            width,
+            height,
+            bombs,
+        }
+    }
+
+    pub fn initialize_board(width: usize, height: usize, bombs: usize) -> Vec<Vec<Tile>> {
         // Create the tiles.
         let mut tiles: Vec<Vec<Tile>> = (0..height)
             .map(|_| {
@@ -82,79 +128,13 @@ impl Board {
             }
         }
 
-        Board {
-            tiles,
-            width,
-            height,
-            bombs,
-        }
+        tiles
     }
-}
 
-#[derive(Serialize, Deserialize, PartialEq, Clone)]
-pub enum Action {
-    Flag,
-    Reveal,
-}
-
-#[derive(Clone, Serialize, Deserialize)]
-pub struct LogEntry {
-    pub when: DateTime<Utc>,
-    pub action: Action,
-}
-
-#[derive(Clone, Serialize, Deserialize, Component)]
-pub struct Game {
-    pub board: Board,
-    pub started: DateTime<Utc>,
-    pub finished: Option<DateTime<Utc>>,
-    pub game_over: bool,
-    pub game_won: bool,
-    pub log: Vec<LogEntry>,
-    pub top_left: Vec2,
-}
-
-#[derive(Error, Debug)]
-pub enum GameError {
-    #[error("Cannot modify a visible tile")]
-    CannotModifyVisibleTile,
-    #[error("Cannot reveal a flagged tile")]
-    CannotRevealFlaggedTile,
-    #[error("Game is over")]
-    GameAlreadyOver,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub enum Response {
-    GameOver,
-    GameWon,
-    Flag,
-    Unflag,
-    Reveal(HashSet<(usize, usize)>),
-}
-
-impl Game {
-    pub fn new(width: usize, height: usize, bombs: usize) -> Game {
-        let board = Board::new(width, height, bombs);
-        let started = Utc::now();
-        let finished = None;
-        let game_over = false;
-        let game_won = false;
-        let log = Vec::new();
-        let top_left = Vec2::new(
-            -TILE_SIZE_WITH_GAP * width as f32 / 2.0,
-            TILE_SIZE_WITH_GAP * height as f32 / 2.0,
-        );
-
-        Game {
-            board,
-            started,
-            finished,
-            game_over,
-            game_won,
-            log,
-            top_left,
-        }
+    pub fn reset(&mut self) {
+        self.board = Self::initialize_board(self.width, self.height, self.bombs);
+        self.game_over = false;
+        self.game_won = false;
     }
 
     pub fn tile_position(&self, x: usize, y: usize) -> Vec2 {
@@ -165,39 +145,39 @@ impl Game {
     }
 
     pub fn tile(&self, x: usize, y: usize) -> Tile {
-        self.board.tiles[y][x]
+        self.board[y][x]
     }
 
     pub fn tile_number(&self, x: usize, y: usize) -> u8 {
-        if x < self.board.width && y < self.board.height {
-            self.board.tiles[y][x].number
+        if x < self.width && y < self.height {
+            self.board[y][x].number
         } else {
             0
         }
     }
 
-    pub fn perform_action(&mut self, x: usize, y: usize, action: Action) -> Result<Response> {
+    pub fn perform_action(&mut self, x: usize, y: usize, action: Action) -> Result<Response, GameError> {
         if self.game_over {
-            return Err(GameError::GameAlreadyOver.into());
+            return Err(GameError::GameAlreadyOver);
         }
 
         let response = match action {
             Action::Flag => {
-                if self.board.tiles[y][x].revealed {
-                    return Err(GameError::CannotModifyVisibleTile.into());
+                if self.board[y][x].revealed {
+                    return Err(GameError::CannotModifyVisibleTile);
                 }
-                self.board.tiles[y][x].flagged = !self.board.tiles[y][x].flagged;
-                if self.board.tiles[y][x].flagged {
+                self.board[y][x].flagged = !self.board[y][x].flagged;
+                if self.board[y][x].flagged {
                     Response::Flag
                 } else {
                     Response::Unflag
                 }
             }
             Action::Reveal => {
-                if self.board.tiles[y][x].flagged {
-                    return Err(GameError::CannotRevealFlaggedTile.into());
+                if self.board[y][x].flagged {
+                    return Err(GameError::CannotRevealFlaggedTile);
                 }
-                if self.board.tiles[y][x].bomb {
+                if self.board[y][x].bomb {
                     self.finish_game(false);
                     Response::GameOver
                 } else {
@@ -212,17 +192,11 @@ impl Game {
                 }
             }
         };
-
-        self.log.push(LogEntry {
-            when: Utc::now(),
-            action: action.clone(),
-        });
-
         Ok(response)
     }
 
     pub fn all_tiles_revealed(&self) -> bool {
-        for row in &self.board.tiles {
+        for row in &self.board {
             for tile in row {
                 if !tile.revealed && !tile.bomb {
                     return false;
@@ -238,14 +212,14 @@ impl Game {
         x: usize,
         y: usize,
     ) {
-        if self.board.tiles[y][x].revealed {
+        if self.board[y][x].revealed {
             return;
         }
 
-        self.board.tiles[y][x].revealed = true;
+        self.board[y][x].revealed = true;
         tiles.insert((x, y));
 
-        if self.board.tiles[y][x].number == 0 {
+        if self.board[y][x].number == 0 {
             for dy in -1..=1 {
                 for dx in -1..=1 {
                     if dy == 0 && dx == 0 {
@@ -253,11 +227,7 @@ impl Game {
                     }
                     let nx = x as isize + dx;
                     let ny = y as isize + dy;
-                    if nx >= 0
-                        && nx < self.board.width as isize
-                        && ny >= 0
-                        && ny < self.board.height as isize
-                    {
+                    if nx >= 0 && nx < self.width as isize && ny >= 0 && ny < self.height as isize {
                         self.reveal_tiles_recursively(tiles, nx as usize, ny as usize);
                     }
                 }
@@ -268,7 +238,6 @@ impl Game {
     pub fn finish_game(&mut self, won: bool) {
         self.game_over = true;
         self.game_won = won;
-        self.finished = Some(Utc::now());
     }
 
     pub fn window_to_world(
@@ -282,8 +251,8 @@ impl Game {
     }
 
     pub fn world_to_tile(&self, world_position: bevy::math::Vec2) -> Option<(usize, usize)> {
-        let adjusted_x = world_position.x + (TILE_SIZE_WITH_GAP * self.board.width as f32) / 2.0;
-        let adjusted_y = world_position.y - (TILE_SIZE_WITH_GAP * self.board.height as f32) / 2.0;
+        let adjusted_x = world_position.x + (TILE_SIZE_WITH_GAP * self.width as f32) / 2.0;
+        let adjusted_y = world_position.y - (TILE_SIZE_WITH_GAP * self.height as f32) / 2.0;
 
         let x = (adjusted_x / TILE_SIZE_WITH_GAP).round();
         let y = (-adjusted_y / TILE_SIZE_WITH_GAP).round();
@@ -291,7 +260,7 @@ impl Game {
         if x < 0.0 || y < 0.0 {
             return None; // Out of bounds
         }
-        if x >= self.board.width as f32 || y >= self.board.height as f32 {
+        if x >= self.width as f32 || y >= self.height as f32 {
             return None; // Out of bounds
         }
 
